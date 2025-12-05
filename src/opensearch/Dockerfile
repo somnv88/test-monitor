@@ -9,7 +9,7 @@ USER 0
 # These plugins are not needed for basic log storage and retrieval in the demo
 RUN /usr/share/opensearch/bin/opensearch-plugin remove opensearch-security-analytics && \
     /usr/share/opensearch/bin/opensearch-plugin remove opensearch-alerting && \
-    /usr/share/opensearch/bin/opensearch-plugin remove opensearch-anomaly-detection && \
+    # /usr/share/opensearch/bin/opensearch-plugin remove opensearch-anomaly-detection && \
     /usr/share/opensearch/bin/opensearch-plugin remove opensearch-asynchronous-search && \
     /usr/share/opensearch/bin/opensearch-plugin remove opensearch-cross-cluster-replication && \
     /usr/share/opensearch/bin/opensearch-plugin remove opensearch-custom-codecs && \

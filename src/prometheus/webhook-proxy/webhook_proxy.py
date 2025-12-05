@@ -1,0 +1,89 @@
+#!/usr/bin/env python3
+import json
+import requests
+import os
+from flask import Flask, request, jsonify
+from datetime import datetime
+
+app = Flask(__name__)
+
+# Lấy Google Chat webhook URL từ environment variable
+GOOGLE_CHAT_WEBHOOK = os.getenv('GOOGLE_CHAT_WEBHOOK')
+
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    try:
+        # Nhận payload từ Alertmanager
+        data = request.get_json()
+        
+        # Tạo message cho Google Chat
+        message_text = "🚨 *Prometheus Alert*\n\n"
+        
+        for alert in data.get('alerts', []):
+            alert_name = alert.get('labels', {}).get('alertname', 'Unknown')
+            status = alert.get('status', 'unknown')
+            summary = alert.get('annotations', {}).get('summary', 'No summary')
+            instance = alert.get('labels', {}).get('instance', 'Unknown')
+            instance_name = alert.get('labels', {}).get('instance_name', None)
+            
+            # Debug: In ra labels để kiểm tra
+            print(f"DEBUG - Alert labels: {alert.get('labels', {})}")
+            print(f"DEBUG - instance: {instance}, instance_name: {instance_name}")
+            
+            # Nếu không có instance_name, dùng instance nhưng làm đẹp
+            if not instance_name or instance_name == 'Unknown':
+                # Lấy IP từ instance (loại bỏ port nếu có)
+                instance_name = instance.split(':')[0] if ':' in instance else instance
+            
+            # Format thời gian
+            starts_at = alert.get('startsAt', '')
+            if starts_at:
+                try:
+                    dt = datetime.fromisoformat(starts_at.replace('Z', '+00:00'))
+                    time_str = dt.strftime('%Y-%m-%d %H:%M:%S')
+                except:
+                    time_str = starts_at
+            else:
+                time_str = 'Unknown'
+            
+            # Emoji dựa trên status
+            status_emoji = "🔴" if status == "firing" else "🟢"
+            
+            message_text += f"{status_emoji} **Alert:** {alert_name}\n"
+            message_text += f"**Status:** {status}\n"
+            message_text += f"**Summary:** {summary}\n"
+            message_text += f"**Instance:** {instance_name}\n"  # Chỉ hiển thị instance_name
+            message_text += f"**Time:** {time_str}\n"
+            message_text += "---\n"
+        
+        # Gửi tới Google Chat
+        google_chat_payload = {
+            "text": message_text
+        }
+        
+        if GOOGLE_CHAT_WEBHOOK:
+            response = requests.post(
+                GOOGLE_CHAT_WEBHOOK,
+                json=google_chat_payload,
+                headers={'Content-Type': 'application/json'}
+            )
+            
+            if response.status_code == 200:
+                return jsonify({"status": "success"}), 200
+            else:
+                print(f"Google Chat API error: {response.status_code} - {response.text}")
+                return jsonify({"status": "error", "message": response.text}), 500
+        else:
+            print("GOOGLE_CHAT_WEBHOOK not configured")
+            return jsonify({"status": "error", "message": "Webhook URL not configured"}), 500
+            
+    except Exception as e:
+        print(f"Error processing webhook: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({"status": "healthy"}), 200
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)

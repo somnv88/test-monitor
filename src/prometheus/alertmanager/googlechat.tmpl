@@ -1,0 +1,42 @@
+{{ define "googlechat.message" }}
+{
+  "text": "{{ if eq .Status "firing" }}🔥 ALERT FIRING{{ else }}✅ ALERT RESOLVED{{ end }}",
+  "cards": [
+    {
+      "sections": [
+        {
+          "widgets": [
+            {
+              "keyValue": {
+                "topLabel": "Alert",
+                "content": "{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}"
+              }
+            },
+            {
+              "keyValue": {
+                "topLabel": "Status",
+                "content": "{{ .Status }}"
+              }
+            },
+            {
+              "keyValue": {
+                "topLabel": "Severity",
+                "content": "{{ range .Alerts }}{{ .Labels.severity }}{{ end }}"
+              }
+            },
+            {
+              "keyValue": {
+                "topLabel": "Description",
+                "content": "{{ range .Alerts }}{{ .Annotations.description }}{{ end }}"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+{{ end }}
+
+{{/* Default template for webhook - returns JSON */}}
+{{ template "googlechat.message" . }}

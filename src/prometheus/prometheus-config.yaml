@@ -5,6 +5,23 @@ global:
   # Align Prometheus scrape interval with the OTel SDKs' export interval for consistency (see OTEL_METRIC_EXPORT_INTERVAL)
   scrape_interval: 60s
 
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+rule_files:
+  - /etc/prometheus/alert.rules.yml
+
+scrape_configs:
+  - job_name: node-exporters
+    static_configs:
+      - targets:
+          - 172.17.0.1:9100
+        labels:
+          instance_name: host
+
 otlp:
   keep_identifying_resource_attributes: true
   promote_resource_attributes:

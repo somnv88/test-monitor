@@ -1,0 +1,116 @@
+groups:
+  - name: node-alerts
+    rules:
+      - alert: NodeDown
+        expr: up{job="node-exporters"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Node down: {{ $labels.instance_name }} - {{ $labels.instance }}"
+          description: "Node exporter is down for 1 minutes."
+
+      - alert: HighRAMUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.10
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High RAM usage: {{ $labels.instance_name }} - {{ $labels.instance }}"
+          description: "RAM usage is over 90% for 3 minutes."
+
+      - alert: HighDiskUsage
+        expr: (node_filesystem_size_bytes{fstype!="tmpfs", mountpoint="/"} - node_filesystem_free_bytes{fstype!="tmpfs", mountpoint="/"}) / node_filesystem_size_bytes{fstype!="tmpfs", mountpoint="/"} > 0.10
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High disk usage: {{ $labels.instance_name }} - {{ $labels.instance }}"
+          description: "Disk usage is over 80% for 3 minutes."
+      
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance, instance_name) (rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100) > 10
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High CPU usage: {{ $labels.instance_name }} - {{ $labels.instance }}"
+          description: "CPU usage is over 80% for 3 minutes."
+
+  # PostgreSQL Alerts
+  - name: postgres-alerts
+    rules:
+      - alert: PostgreSQLDown
+        expr: up{job="postgres-exporters"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL down: {{ $labels.instance_name }} - {{ $labels.instance }}"
+          description: "PostgreSQL exporter is down for 1 minute."
+
+      - alert: PostgreSQLTooManyConnections
+        expr: pg_stat_database_numbackends / pg_settings_max_connections > 0.8
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL too many connections: {{ $labels.instance_name }} - {{ $labels.instance }}"
+          description: "PostgreSQL has {{ $value | humanizePercentage }} connections used."
+
+      - alert: PostgreSQLDeadLocks
+        expr: rate(pg_stat_database_deadlocks[1m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL deadlocks: {{ $labels.instance_name }} - {{ $labels.instance }}"
+          description: "PostgreSQL has deadlocks detected."
+
+      - alert: PostgreSQLHighQPS
+        expr: rate(pg_stat_database_xact_commit[1m]) + rate(pg_stat_database_xact_rollback[1m]) > 1000
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL high QPS: {{ $labels.instance_name }} - {{ $labels.instance }}"
+          description: "PostgreSQL QPS is {{ $value }} transactions per second."
+
+  # MongoDB Alerts
+  - name: mongodb-alerts
+    rules:
+      - alert: MongoDBDown
+        expr: up{job="mongodb-exporters"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MongoDB down: {{ $labels.instance_name }} - {{ $labels.instance }}"
+          description: "MongoDB exporter is down for 1 minute."
+
+      - alert: MongoDBTooManyConnections
+        expr: mongodb_connections{state="current"} / mongodb_connections{state="available"} > 0.8
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MongoDB too many connections: {{ $labels.instance_name }} - {{ $labels.instance }}"
+          description: "MongoDB has {{ $value | humanizePercentage }} connections used."
+
+      - alert: MongoDBReplicationLag
+        expr: mongodb_mongod_replset_member_replication_lag > 10
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MongoDB replication lag: {{ $labels.instance_name }} - {{ $labels.instance }}"
+          description: "MongoDB replication lag is {{ $value }} seconds."
+
+      - alert: MongoDBHighCursors
+        expr: mongodb_mongod_metrics_cursor_open{state="total_open"} > 10000
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MongoDB high cursors: {{ $labels.instance_name }} - {{ $labels.instance }}"
+          description: "MongoDB has {{ $value }} cursors opened."

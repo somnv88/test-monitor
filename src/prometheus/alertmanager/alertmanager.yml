@@ -1,0 +1,16 @@
+global:
+  smtp_smarthost: 'localhost:587'
+  smtp_from: 'alertmanager@example.org'
+
+route:
+  group_by: ['alertname']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'webhook-receiver'
+
+receivers:
+- name: 'webhook-receiver'
+  webhook_configs:
+  - url: 'http://webhook-proxy:5000/webhook'
+    send_resolved: true
